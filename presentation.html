@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TAG — AI Hackathon</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg:         #141210;
+    --bg-deep:    #0e0d0b;
+    --card:       #1e1c19;
+    --fg:         #f0ebe3;
+    --muted:      #9b9589;
+    --dim:        #5e5850;
+    --border:     #2a2724;
+    --border-strong: #3d3a35;
+    --orange:     #ff5f1f;
+    --blue:       #2b5cff;
+    --amber:      #ffb347;
+  }
+
+  html, body {
+    height: 100%; width: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .grain {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 50; opacity: 0.05;
+  }
+
+  .deck { position: relative; height: 100vh; width: 100vw; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 3.5rem 6rem;
+    opacity: 0; pointer-events: none;
+    transition: opacity .4s ease, transform .4s ease;
+    transform: translateY(12px);
+    text-align: center; overflow: hidden;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+  .slide.left { align-items: flex-start; text-align: left; padding: 4rem 7rem; }
+
+  h1 {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(2.5rem, 6vw, 5.5rem);
+    line-height: 1.05; letter-spacing: -0.02em;
+  }
+  h2 {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(1.8rem, 4vw, 3.5rem);
+    line-height: 1.15; letter-spacing: -0.02em;
+  }
+  h3 {
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: clamp(1rem, 1.6vw, 1.4rem);
+    line-height: 1.3;
+  }
+  p, li {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(0.9rem, 1.4vw, 1.15rem);
+    line-height: 1.6; color: var(--muted);
+  }
+
+  .tag-orange { color: var(--orange); }
+  .accent-line { width: 60px; height: 3px; background: var(--orange); margin: 1rem 0; }
+  .accent-line.center { margin: 1rem auto; }
+
+  .badge {
+    display: inline-block; padding: 0.3rem 0.9rem;
+    border: 1px solid var(--orange); border-radius: 2px;
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--orange); margin-bottom: 1rem;
+  }
+
+  .statement {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(1.8rem, 4vw, 3.2rem);
+    line-height: 1.2; max-width: 900px;
+  }
+
+  /* ── BG image ── */
+  .bg-image {
+    position: absolute; inset: 0; z-index: -2;
+    background-size: cover; background-position: center;
+    filter: saturate(0.5) brightness(0.3) contrast(1.1);
+  }
+  .bg-overlay {
+    position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(to bottom, rgba(20,18,16,0.5), rgba(20,18,16,0.92));
+  }
+
+  .tag-logo {
+    height: 45px;
+    filter: brightness(0) invert(0.92) sepia(0.05);
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── Schedule ── */
+  .sched-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 2.5rem; width: 100%; max-width: 960px; margin-top: 1rem;
+  }
+  .sched-title {
+    font-family: 'Space Mono', monospace; font-size: 0.65rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--orange); padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border); margin-bottom: 0.2rem; text-align: left;
+  }
+  .sched-row {
+    display: flex; align-items: baseline; gap: 1rem;
+    padding: 0.35rem 0; text-align: left;
+    border-bottom: 1px solid rgba(42,39,36,0.4);
+  }
+  .sched-row:last-child { border-bottom: none; }
+  .sched-time {
+    font-family: 'Space Mono', monospace; font-weight: 700;
+    font-size: 0.8rem; color: var(--orange); min-width: 48px;
+  }
+  .sched-label { font-weight: 500; font-size: 0.9rem; color: var(--fg); }
+
+  /* ── Judge cards ── */
+  .judges-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1rem; width: 100%; max-width: 900px; margin-top: 1rem;
+  }
+  .judge-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1.3rem 1rem; text-align: center;
+  }
+  .judge-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: var(--border-strong); margin: 0 auto 0.6rem;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 800;
+    overflow: hidden;
+  }
+  .judge-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .judge-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.15rem; }
+  .judge-role { font-size: 0.75rem; color: var(--dim); }
+
+  /* ── Prize cards ── */
+  .prize-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1rem; width: 100%; max-width: 900px; margin-top: 1rem;
+  }
+  .prize-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1.3rem; text-align: center;
+  }
+  .prize-card.gold { border-color: var(--orange); border-width: 2px; }
+  .prize-place { font-family: 'Space Mono', monospace; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dim); margin-bottom: 0.4rem; }
+  .prize-cash { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.8rem; color: var(--orange); }
+  .prize-card.gold .prize-cash { font-size: 2.2rem; }
+  .prize-credits { font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; line-height: 1.5; }
+
+  /* ── CTA box ── */
+  .cta-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-left: 3px solid var(--orange); border-radius: 2px;
+    padding: 1rem 2rem; margin-top: 1.5rem; max-width: 480px; text-align: left;
+  }
+  .cta-box code {
+    font-family: 'Space Mono', monospace;
+    background: rgba(255,95,31,0.1); border: 1px solid var(--border);
+    padding: 0.1em 0.4em; border-radius: 2px; font-size: 0.85em; color: var(--orange);
+  }
+
+  /* ── Three cards (TAG answer) ── */
+  .three-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem; width: 100%; max-width: 960px; margin-top: 1.5rem;
+  }
+  .tcard {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1.8rem 1.5rem; text-align: left;
+  }
+  .tcard-icon {
+    font-family: 'Space Mono', monospace; font-size: 0.6rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--orange); margin-bottom: 0.8rem;
+  }
+  .tcard h3 { margin-bottom: 0.4rem; font-size: 1.15rem; }
+  .tcard p { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+
+  /* ── Scattered dots ── */
+  .scatter-field {
+    position: absolute; inset: 0; z-index: -1;
+  }
+  .scatter-dot {
+    position: absolute;
+    width: 6px; height: 6px;
+    background: var(--orange);
+    opacity: 0.15;
+    border-radius: 1px;
+  }
+  .scatter-dot.bright { opacity: 0.5; }
+  .scatter-dot.dim { opacity: 0.07; background: var(--muted); }
+
+  /* ── Converge dots ── */
+  .converge-field {
+    position: absolute; inset: 0; z-index: -1;
+  }
+  .converge-dot {
+    position: absolute;
+    width: 6px; height: 6px;
+    background: var(--orange);
+    border-radius: 1px;
+  }
+  .converge-center {
+    position: absolute;
+    width: 14px; height: 14px;
+    background: var(--orange);
+    border-radius: 2px;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 30px rgba(255,95,31,0.4), 0 0 60px rgba(255,95,31,0.15);
+  }
+
+  /* ── Branch visual ── */
+  .branch-visual {
+    display: flex; align-items: center; justify-content: center;
+    gap: 4rem; margin-top: 2rem; width: 100%; max-width: 700px;
+  }
+  .branch-side { text-align: center; flex: 1; }
+  .branch-icon {
+    display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+  .stick {
+    width: 3px; height: 80px; background: var(--dim); border-radius: 1px;
+    position: relative;
+  }
+  .stick.broken {
+    height: 36px;
+  }
+  .stick.broken::after {
+    content: ''; position: absolute; bottom: -12px; left: -2px;
+    width: 3px; height: 36px; background: var(--dim);
+    transform: rotate(25deg); border-radius: 1px; opacity: 0.4;
+  }
+  .bundle {
+    display: flex; gap: 3px; align-items: flex-end;
+  }
+  .bundle .stick {
+    background: var(--orange); height: 80px;
+  }
+  .bundle .stick:nth-child(2) { height: 75px; }
+  .bundle .stick:nth-child(4) { height: 70px; }
+  .branch-label {
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 1rem;
+  }
+  .vs-divider {
+    font-family: 'Space Mono', monospace; font-size: 0.7rem;
+    color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em;
+  }
+
+  /* ── Sponsor cards ── */
+  .sponsor-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem; width: 100%; max-width: 800px; margin-top: 1.5rem;
+  }
+  .sponsor-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2rem 1.5rem; text-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .sponsor-name {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 1.4rem; margin-bottom: 0.3rem;
+  }
+  .sponsor-desc { font-size: 0.75rem; color: var(--dim); }
+
+  /* ── Qoder spotlight ── */
+  .spotlight-card {
+    background: var(--card); border: 2px solid var(--orange);
+    border-radius: 4px; padding: 2.5rem 3rem; text-align: center;
+    max-width: 600px; margin-top: 1.5rem;
+  }
+
+  /* ── Eligibility + Criteria split ── */
+  .split-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 2rem; width: 100%; max-width: 1000px; margin-top: 1.2rem;
+  }
+  .split-col { text-align: left; }
+  .split-col-title {
+    font-family: 'Space Mono', monospace; font-size: 0.6rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--orange); padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border); margin-bottom: 0.8rem;
+  }
+  .criteria-row {
+    display: flex; align-items: baseline; gap: 0.7rem;
+    padding: 0.35rem 0; border-bottom: 1px solid rgba(42,39,36,0.3);
+  }
+  .criteria-row:last-child { border-bottom: none; }
+  .criteria-num {
+    font-family: 'Space Mono', monospace; font-weight: 700;
+    font-size: 0.7rem; color: var(--orange); min-width: 20px;
+  }
+  .criteria-name { font-weight: 600; font-size: 0.85rem; color: var(--fg); }
+  .criteria-q { font-size: 0.75rem; color: var(--dim); margin-left: auto; }
+  .elig-row {
+    padding: 0.5rem 0; border-bottom: 1px solid rgba(42,39,36,0.3);
+    font-size: 0.85rem; color: var(--fg); font-weight: 500;
+  }
+  .elig-row:last-child { border-bottom: none; }
+  .elig-row span { color: var(--orange); font-weight: 700; }
+
+  /* ── Steps (team formation) ── */
+  .steps {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1rem; margin-top: 2rem; width: 100%; max-width: 900px;
+  }
+  .step-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1.5rem 2rem; text-align: center; flex: 1;
+  }
+  .step-num {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 2rem; color: var(--orange); margin-bottom: 0.3rem;
+  }
+  .step-card h3 { margin-bottom: 0.3rem; }
+  .step-card p { font-size: 0.8rem; color: var(--dim); }
+  .step-arrow {
+    font-size: 1.4rem; color: var(--orange);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ── Map ── */
+  .map-container {
+    position: relative; width: 100%; max-width: 800px; border-radius: 6px;
+    overflow: hidden; border: 1px solid var(--border);
+  }
+  .map-img {
+    width: 100%; display: block;
+    filter: saturate(0) brightness(0.35) contrast(1.3);
+  }
+  .map-pin {
+    position: absolute; display: flex; align-items: center; gap: 0.5rem;
+    transform: translate(-6px, -6px);
+  }
+  .map-pin-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--fg); border: 2px solid var(--bg);
+    box-shadow: 0 0 0 2px var(--fg), 0 0 12px rgba(240,235,227,0.3);
+    flex-shrink: 0;
+  }
+  .map-pin-dot.highlight {
+    background: var(--orange);
+    box-shadow: 0 0 0 2px var(--orange), 0 0 16px rgba(255,95,31,0.5);
+  }
+  .map-pin-label {
+    background: rgba(20,18,16,0.9); border: 1px solid var(--border);
+    padding: 0.3rem 0.6rem; border-radius: 3px;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem;
+    color: var(--fg); white-space: nowrap;
+    backdrop-filter: blur(4px);
+  }
+  .map-pin-label.highlight { border-color: var(--orange); color: var(--orange); }
+  .map-pin-label span {
+    display: block; font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400; font-size: 0.6rem; color: var(--dim); margin-top: 0.1rem;
+  }
+
+  /* ── TAG watermark ── */
+  .tag-watermark {
+    position: absolute; inset: 0; z-index: -1; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    gap: 0; pointer-events: none;
+  }
+  .tag-watermark-row {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(4rem, 10vw, 9rem); letter-spacing: -0.02em;
+    color: rgba(240,235,227,0.03); white-space: nowrap;
+    line-height: 0.95;
+  }
+  .tag-watermark-row.offset { transform: translateX(-2rem); }
+
+  /* ── TAG hero text logo ── */
+  .tag-text-logo {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(3rem, 8vw, 7rem); letter-spacing: -0.02em;
+    line-height: 0.95; color: var(--fg);
+  }
+
+  /* ── Progress ── */
+  .progress { position: fixed; bottom: 0; left: 0; height: 2px; background: var(--orange); transition: width .4s ease; z-index: 100; }
+  .slide-counter { position: fixed; bottom: 0.8rem; right: 1.5rem; font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--dim); z-index: 100; }
+</style>
+</head>
+<body>
+
+<svg class="grain" width="100%" height="100%">
+  <filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+  <rect width="100%" height="100%" filter="url(#noise)"/>
+</svg>
+
+<div class="deck">
+
+  <!-- ====== 1. TAG FILL ====== -->
+  <div class="slide active" id="s1" style="overflow: hidden;">
+    <div style="position: absolute; inset: -20px; z-index: 0; pointer-events: none; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.2rem; letter-spacing: 0.08em; color: rgba(240,235,227,0.04); line-height: 1.4; word-spacing: 0.5em; overflow: hidden; display: flex; flex-wrap: wrap; align-content: flex-start;">
+      TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG TAG
+    </div>
+    <div class="tag-text-logo" style="font-size: clamp(3rem, 6vw, 5.5rem); z-index: 1;">TAG</div>
+    <p style="font-family: 'Space Mono', monospace; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--dim); margin-top: 0.8rem; z-index: 1;">To Achieve Greatness</p>
+  </div>
+
+  <!-- ====== 2. HERO ====== -->
+  <div class="slide" id="s1b">
+    <div class="bg-image" style="background-image: url('images/program-events.jpg'); filter: saturate(0.4) brightness(0.25) contrast(1.15);"></div>
+    <div class="bg-overlay" style="background: linear-gradient(to bottom, rgba(20,18,16,0.3), rgba(20,18,16,0.85));"></div>
+    <div class="tag-text-logo" style="margin-bottom: 0.5rem;">TAG</div>
+    <h1 style="font-size: clamp(2.5rem, 6vw, 5rem);">AI Hackathon</h1>
+    <p style="font-family: 'Space Mono', monospace; font-size: clamp(0.55rem, 0.9vw, 0.75rem); font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--orange); margin-top: 0.8rem;">
+      Build Fast &middot; Deploy Live &middot; Ship or Go Home
+    </p>
+    <div class="accent-line center" style="margin: 1rem auto;"></div>
+    <p style="font-size: 1.3rem; color: var(--fg); font-weight: 600;">Bring Your Own Startup</p>
+    <div style="display: flex; gap: 1.5rem; margin-top: 1.2rem; align-items: center;">
+      <span style="font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.05em;">Netlify</span>
+      <span style="color: var(--dim);">&middot;</span>
+      <span style="font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.05em;">CharlieLabs</span>
+      <span style="color: var(--dim);">&middot;</span>
+      <span style="font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.05em;">Qoder</span>
+    </div>
+    <p style="margin-top: 1.2rem; font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--dim);">
+      25.03.2026 &middot; Jacob Bontiusplats 9 &middot; Amsterdam
+    </p>
+  </div>
+
+  <!-- ====== 3. THIS IS TAG ====== -->
+  <div class="slide" id="s2">
+    <div class="tag-text-logo" style="font-size: clamp(2rem, 5vw, 4rem); margin-bottom: 1.5rem;">TAG</div>
+    <h2 style="font-weight: 700; font-size: clamp(1.4rem, 2.8vw, 2.2rem); max-width: 700px; line-height: 1.4;">
+      For the <span class="tag-orange">obsessed</span>, creative and talented<br>people who create. Every single day.
+    </h2>
+    <div class="accent-line center"></div>
+    <p style="max-width: 520px; font-size: clamp(0.8rem, 1.1vw, 0.95rem); line-height: 1.7; margin-top: 0.5rem;">
+      A community of builders, hackers, and creators in Amsterdam. We ship every month. We show what we built &mdash; then we do it again. Ship fast, learn faster, show your work.
+    </p>
+  </div>
+
+  <!-- ====== 3. THE ECOSYSTEM — MAP ====== -->
+  <div class="slide" id="s3">
+    <span class="badge">This Building</span>
+    <h2>What's happening <span class="tag-orange">around us.</span></h2>
+    <div class="accent-line center"></div>
+    <p style="max-width: 600px; margin-top: 0.3rem; margin-bottom: 1.2rem;">This might become something bigger than any of us.</p>
+    <!-- Map container with overlay labels -->
+    <div class="map-container">
+      <img src="images/map.png" alt="Oostenburg area" class="map-img">
+      <!-- TAG @ AI.AM — same location -->
+      <div class="map-pin" style="top: 62%; left: 58%;">
+        <div class="map-pin-dot highlight"></div>
+        <div class="map-pin-label highlight">TAG @ AI.AM<span>You are here</span></div>
+      </div>
+      <!-- Norrsken — TBD position, placeholder near top-left -->
+      <div class="map-pin" style="top: 30%; left: 30%;">
+        <div class="map-pin-dot"></div>
+        <div class="map-pin-label">Norrsken<span>Moving in</span></div>
+      </div>
+      <!-- TechLeap — TBD position, placeholder -->
+      <div class="map-pin" style="top: 45%; left: 48%;">
+        <div class="map-pin-dot"></div>
+        <div class="map-pin-label">TechLeap<span>Joining the ecosystem</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 4a. SCATTERED ====== -->
+  <div class="slide" id="s4">
+    <div class="scatter-field">
+      <!-- Scattered dots — random positions across the slide -->
+      <div class="scatter-dot bright" style="top:8%;left:12%"></div>
+      <div class="scatter-dot" style="top:15%;left:67%"></div>
+      <div class="scatter-dot dim" style="top:22%;left:34%"></div>
+      <div class="scatter-dot bright" style="top:11%;left:85%"></div>
+      <div class="scatter-dot" style="top:35%;left:8%"></div>
+      <div class="scatter-dot dim" style="top:42%;left:91%"></div>
+      <div class="scatter-dot" style="top:55%;left:22%"></div>
+      <div class="scatter-dot bright" style="top:68%;left:78%"></div>
+      <div class="scatter-dot dim" style="top:73%;left:45%"></div>
+      <div class="scatter-dot" style="top:82%;left:15%"></div>
+      <div class="scatter-dot bright" style="top:28%;left:52%"></div>
+      <div class="scatter-dot dim" style="top:88%;left:72%"></div>
+      <div class="scatter-dot" style="top:6%;left:43%"></div>
+      <div class="scatter-dot dim" style="top:48%;left:62%"></div>
+      <div class="scatter-dot bright" style="top:62%;left:38%"></div>
+      <div class="scatter-dot" style="top:78%;left:88%"></div>
+      <div class="scatter-dot dim" style="top:33%;left:76%"></div>
+      <div class="scatter-dot" style="top:91%;left:30%"></div>
+      <div class="scatter-dot bright" style="top:18%;left:20%"></div>
+      <div class="scatter-dot dim" style="top:58%;left:7%"></div>
+      <div class="scatter-dot" style="top:44%;left:48%"></div>
+      <div class="scatter-dot dim" style="top:70%;left:58%"></div>
+      <div class="scatter-dot bright" style="top:25%;left:93%"></div>
+      <div class="scatter-dot" style="top:85%;left:53%"></div>
+      <div class="scatter-dot dim" style="top:13%;left:55%"></div>
+      <div class="scatter-dot bright" style="top:50%;left:82%"></div>
+      <div class="scatter-dot" style="top:38%;left:28%"></div>
+      <div class="scatter-dot dim" style="top:65%;left:92%"></div>
+      <div class="scatter-dot" style="top:92%;left:12%"></div>
+      <div class="scatter-dot bright" style="top:3%;left:75%"></div>
+    </div>
+    <div class="statement">
+      We're too <span class="tag-orange">scattered.</span>
+    </div>
+    <p style="margin-top: 1rem; font-size: 1.05rem; color: var(--muted);">
+      Europe. The Netherlands. All of it.
+    </p>
+  </div>
+
+  <!-- ====== 4b. THE BRANCH ====== -->
+  <div class="slide" id="s5">
+    <div class="branch-visual">
+      <div class="branch-side">
+        <div class="branch-icon">
+          <div class="stick broken"></div>
+        </div>
+        <div class="branch-label" style="color: var(--dim);">One branch.</div>
+        <p style="font-size: 0.8rem; margin-top: 0.3rem;">Breaks.</p>
+      </div>
+      <div class="vs-divider">vs</div>
+      <div class="branch-side">
+        <div class="branch-icon">
+          <div class="bundle">
+            <div class="stick"></div>
+            <div class="stick"></div>
+            <div class="stick"></div>
+            <div class="stick"></div>
+            <div class="stick"></div>
+          </div>
+        </div>
+        <div class="branch-label" style="color: var(--orange);">Together.</div>
+        <p style="font-size: 0.8rem; margin-top: 0.3rem;">Unbreakable.</p>
+      </div>
+    </div>
+    <p style="margin-top: 2.5rem; font-size: 1.1rem; color: var(--fg); font-weight: 500;">
+      We gotta come together.
+    </p>
+  </div>
+
+  <!-- ====== 4c. BRINGING IT TOGETHER ====== -->
+  <div class="slide" id="s6">
+    <div class="converge-field">
+      <div class="converge-center"></div>
+      <!-- Dots clustered near center -->
+      <div class="converge-dot" style="top:42%;left:44%;opacity:0.6"></div>
+      <div class="converge-dot" style="top:46%;left:53%;opacity:0.5"></div>
+      <div class="converge-dot" style="top:52%;left:47%;opacity:0.7"></div>
+      <div class="converge-dot" style="top:48%;left:50%;opacity:0.4"></div>
+      <div class="converge-dot" style="top:44%;left:56%;opacity:0.5"></div>
+      <div class="converge-dot" style="top:55%;left:52%;opacity:0.6"></div>
+      <div class="converge-dot" style="top:50%;left:43%;opacity:0.4"></div>
+      <div class="converge-dot" style="top:40%;left:49%;opacity:0.3"></div>
+      <div class="converge-dot" style="top:54%;left:55%;opacity:0.5"></div>
+      <div class="converge-dot" style="top:47%;left:46%;opacity:0.6"></div>
+      <div class="converge-dot" style="top:38%;left:52%;opacity:0.2"></div>
+      <div class="converge-dot" style="top:56%;left:48%;opacity:0.3"></div>
+      <div class="converge-dot" style="top:43%;left:58%;opacity:0.2"></div>
+      <div class="converge-dot" style="top:58%;left:44%;opacity:0.3"></div>
+      <div class="converge-dot" style="top:36%;left:47%;opacity:0.15"></div>
+      <div class="converge-dot" style="top:60%;left:51%;opacity:0.15"></div>
+      <!-- A few outliers still coming in -->
+      <div class="converge-dot" style="top:30%;left:35%;opacity:0.1"></div>
+      <div class="converge-dot" style="top:65%;left:62%;opacity:0.1"></div>
+      <div class="converge-dot" style="top:25%;left:60%;opacity:0.08"></div>
+      <div class="converge-dot" style="top:70%;left:38%;opacity:0.08"></div>
+    </div>
+    <div class="statement">
+      Let's <span class="tag-orange">bring it together.</span>
+    </div>
+    <p style="margin-top: 1rem; font-size: 1.05rem; color: var(--muted);">
+      Amsterdam. This room. Tonight.
+    </p>
+  </div>
+
+  <!-- ====== 5. TAG'S ANSWER — THREE CARDS ====== -->
+  <div class="slide" id="s7">
+    <span class="badge">What we do about it</span>
+    <h2>You're <span class="tag-orange">welcome.</span></h2>
+    <div class="accent-line center"></div>
+    <div class="three-cards">
+      <div class="tcard">
+        <div class="tcard-icon">Events</div>
+        <h3>Hackathons & more</h3>
+        <p>We run events like this one. Bigger ones coming. If you want to be part of it, show up.</p>
+      </div>
+      <div class="tcard">
+        <div class="tcard-icon">Space</div>
+        <h3>A place to build</h3>
+        <p>We have a space. You're welcome to come build here. Meet people. Get inspired. Ship faster.</p>
+      </div>
+      <div class="tcard">
+        <div class="tcard-icon">Community</div>
+        <h3>For the obsessed</h3>
+        <p>Anyone ambitious, excited, addicted to building. That's who we are. Come find your people.</p>
+      </div>
+    </div>
+    <p style="margin-top: 1.5rem; font-size: 0.95rem; color: var(--fg); font-weight: 500;">
+      Join us any way you like. We'd love to have you.
+    </p>
+  </div>
+
+  <!-- ====== 6. YOU SHOWED UP ====== -->
+  <div class="slide" id="s8">
+    <div class="statement" style="font-size: clamp(2.2rem, 5vw, 4rem);">
+      It's a fucking <span class="tag-orange">Wednesday</span><br>and you showed up.
+    </div>
+  </div>
+
+  <!-- ====== 7. BYOS ====== -->
+  <div class="slide" id="s9">
+    <h1 style="font-size: clamp(2.5rem, 6vw, 5rem);">Bring Your Own<br><span class="tag-orange">Startup.</span></h1>
+    <div class="accent-line center"></div>
+    <p style="font-size: 0.85rem; color: var(--dim); font-style: italic; margin-top: 0.8rem;">maybe it's just competitive co-working?</p>
+  </div>
+
+  <!-- ====== 8. SCHEDULE ====== -->
+  <div class="slide" id="s10">
+    <span class="badge">The Battle Plan</span>
+    <h2>Today's Schedule</h2>
+    <div class="accent-line center"></div>
+    <div class="sched-grid">
+      <div>
+        <div class="sched-title">Morning &mdash; Build</div>
+        <div class="sched-row"><span class="sched-time">09:30</span><span class="sched-label">Doors, Coffee & Matchmaking</span></div>
+        <div class="sched-row"><span class="sched-time">10:00</span><span class="sched-label">Opening & Sponsor API Drops</span></div>
+        <div class="sched-row"><span class="sched-time">10:20</span><span class="sched-label">Hacking Begins (BYOS)</span></div>
+        <div class="sched-row"><span class="sched-time">12:00</span><span class="sched-label">Lunch</span></div>
+        <div class="sched-row"><span class="sched-time">17:00</span><span class="sched-label">Code Freeze & Submissions</span></div>
+      </div>
+      <div>
+        <div class="sched-title">Evening &mdash; The Showdown</div>
+        <div class="sched-row"><span class="sched-time">18:00</span><span class="sched-label">Top 5 Pitches (2+2 min)</span></div>
+        <div class="sched-row"><span class="sched-time">19:00</span><span class="sched-label">Keynote: Matt Biilmann</span></div>
+        <div class="sched-row"><span class="sched-time">19:20</span><span class="sched-label">Fireside Chat</span></div>
+        <div class="sched-row"><span class="sched-time">19:40</span><span class="sched-label">Unfiltered Live Q&A</span></div>
+        <div class="sched-row"><span class="sched-time">20:00</span><span class="sched-label">Winners & Prizes</span></div>
+        <div class="sched-row"><span class="sched-time">20:15</span><span class="sched-label">Drinks & Networking</span></div>
+      </div>
+    </div>
+    <div style="margin-top: 1.8rem; text-align: center;">
+      <h3 style="font-size: clamp(1.1rem, 2vw, 1.5rem); color: var(--fg);">+ Secret Surprise Activity</h3>
+    </div>
+  </div>
+
+  <!-- ====== 9a. SPONSORS ====== -->
+  <div class="slide" id="s11">
+    <span class="badge">Made possible by</span>
+    <h2>Our <span class="tag-orange">Sponsors</span></h2>
+    <div class="accent-line center"></div>
+    <div class="sponsor-grid">
+      <div class="sponsor-card">
+        <div class="sponsor-name">Netlify</div>
+        <div class="sponsor-desc">Deploy & scale modern web apps</div>
+      </div>
+      <div class="sponsor-card">
+        <div class="sponsor-name">CharlieLabs</div>
+        <div class="sponsor-desc">AI-powered development</div>
+      </div>
+      <div class="sponsor-card">
+        <div class="sponsor-name">Qoder</div>
+        <div class="sponsor-desc">Build smarter, ship faster</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 9b. JONATHAN / QODER ====== -->
+  <div class="slide" id="s12">
+    <span class="badge">Special Introduction</span>
+    <div class="spotlight-card">
+      <div style="font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.6rem; color: var(--orange); margin-bottom: 0.5rem;">Qoder</div>
+      <div class="accent-line center"></div>
+      <p style="font-size: 1.1rem; color: var(--fg); font-weight: 500; margin-top: 0.8rem;">Jonathan</p>
+      <p style="font-size: 0.85rem; color: var(--muted); margin-top: 0.3rem;">The floor is yours.</p>
+    </div>
+  </div>
+
+  <!-- ====== 10. JUDGES ====== -->
+  <div class="slide" id="s13">
+    <span class="badge">The Judges</span>
+    <h2>Who you're pitching to.</h2>
+    <div class="accent-line center"></div>
+    <div class="judges-grid">
+      <div class="judge-card">
+        <div class="judge-avatar">M</div>
+        <div class="judge-name">Matt Biilmann</div>
+        <div class="judge-role">CEO & Co-founder <span class="tag-orange">Netlify</span><br>+ Keynote speaker</div>
+      </div>
+      <div class="judge-card">
+        <div class="judge-avatar">J</div>
+        <div class="judge-name">Jerrod Engelberg</div>
+        <div class="judge-role">COO & Investor<br><span class="tag-orange">CharlieLabs</span></div>
+      </div>
+      <div class="judge-card">
+        <div class="judge-avatar">M</div>
+        <div class="judge-name">Marnix Broers</div>
+        <div class="judge-role">General Partner<br><span class="tag-orange">Peak Capital</span></div>
+      </div>
+    </div>
+    <p style="margin-top: 1.2rem;">19:20 &mdash; Fireside chat with all three, moderated by <strong style="color:var(--fg);">Swatantra Sohni</strong></p>
+  </div>
+
+  <!-- ====== 11a. HOW TO PITCH — INTRO ====== -->
+  <div class="slide" id="s14">
+    <span class="badge">Before You Pitch</span>
+    <h2>A few tips on<br><span class="tag-orange">how to pitch.</span></h2>
+    <div class="accent-line center"></div>
+    <p style="max-width: 550px; font-size: 1.1rem; color: var(--fg); font-weight: 500; margin-top: 0.8rem;">
+      You've built something. Now you need to sell it.<br>Here's how to not blow it.
+    </p>
+  </div>
+
+  <!-- ====== 11b. HOW TO PITCH — PICTURE THEM NAKED ====== -->
+  <div class="slide" id="s14b" style="padding: 0;">
+    <img src="images/Naked+Audiance+1.webp" alt="Picture the audience naked" style="max-width: 100%; max-height: 100vh; object-fit: contain;">
+  </div>
+
+  <!-- ====== 11c. HOW TO PITCH — PICTURE THIS KID ====== -->
+  <div class="slide" id="s14c" style="padding: 0;">
+    <img src="images/shutterstock_172261862-2--d36510500ca044e1bd9bb51f798b3141.jpg" alt="Picture this kid" style="max-width: 100%; max-height: 100vh; object-fit: contain;">
+  </div>
+
+  <!-- ====== 11d. HOW TO PITCH — THE REAL TIPS ====== -->
+  <div class="slide" id="s14d">
+    <span class="badge">How To Pitch</span>
+    <h2>Keep it <span class="tag-orange">dead simple.</span></h2>
+    <div class="accent-line center"></div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; width: 100%; max-width: 900px; margin-top: 1.2rem;">
+      <div class="tcard">
+        <div class="tcard-icon">01 &mdash; Problem</div>
+        <h3>What's broken?</h3>
+        <p>Name the pain. Make it real. If there's no problem, there's no product.</p>
+      </div>
+      <div class="tcard">
+        <div class="tcard-icon">02 &mdash; Money</div>
+        <h3>How does it make money?</h3>
+        <p>Turn the problem into a business. Show the money trail. Problem &rarr; product &rarr; revenue.</p>
+      </div>
+      <div class="tcard">
+        <div class="tcard-icon">03 &mdash; Unique</div>
+        <h3>What makes it special?</h3>
+        <p>Why you? Why this? What do you have that no one else does?</p>
+      </div>
+      <div class="tcard">
+        <div class="tcard-icon">04 &mdash; Why Now</div>
+        <h3>Why would they miss out?</h3>
+        <p>Create FOMO. What happens if they <em>don't</em> act? The train is leaving &mdash; are they on it or watching it go?</p>
+      </div>
+    </div>
+    <p style="margin-top: 1.5rem; font-size: 1rem; color: var(--fg); font-weight: 600;">
+      Don't overcomplicate. <span class="tag-orange">Story &gt; slides.</span> Pictures &gt; walls of text.
+    </p>
+  </div>
+
+  <!-- ====== 12. MAKING THE FINALS ====== -->
+  <div class="slide" id="s15">
+    <span class="badge">Tonight at 18:00</span>
+    <h2>Making it to the <span class="tag-orange">Finals.</span></h2>
+    <div class="accent-line center"></div>
+    <p style="max-width: 650px; font-size: 1.05rem; color: var(--fg); font-weight: 500; margin-top: 0.5rem;">
+      We can't have everyone pitch. There's a filter.
+    </p>
+    <div style="margin-top: 1.5rem; max-width: 600px; text-align: left;">
+      <div style="padding: 0.8rem 0; border-bottom: 1px solid var(--border);">
+        <p style="color: var(--fg); font-weight: 600; font-size: 1rem;">Make it crystal clear what you're building.</p>
+      </div>
+      <div style="padding: 0.8rem 0; border-bottom: 1px solid var(--border);">
+        <p style="color: var(--fg); font-weight: 600; font-size: 1rem;">Show why it's great. Show why it matters.</p>
+      </div>
+      <div style="padding: 0.8rem 0; border-bottom: 1px solid var(--border);">
+        <p style="color: var(--fg); font-weight: 600; font-size: 1rem;">Submit your live link + pitch before <span class="tag-orange">17:00</span>.</p>
+      </div>
+      <div style="padding: 0.8rem 0;">
+        <p style="color: var(--fg); font-weight: 600; font-size: 1rem;">Top 5 get selected to pitch live to the judges.</p>
+      </div>
+    </div>
+    <p style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--dim);">
+      The judges want to see <span style="color: var(--orange);">commercial potential</span> — not just cool tech.
+    </p>
+  </div>
+
+  <!-- ====== 13. HOW TO WIN ====== -->
+  <div class="slide" id="s16">
+    <span class="badge">How To Win</span>
+    <h2><span class="tag-orange">Commercial potential</span> &gt; technical complexity</h2>
+    <div class="accent-line center"></div>
+    <div class="split-grid">
+      <div class="split-col">
+        <div class="split-col-title">Eligibility</div>
+        <div class="elig-row"><span>Deploy on Netlify</span> &mdash; URL must end in .netlify.app</div>
+        <div class="elig-row"><span>Use Qoder + Charlie Labs</span> &mdash; meaningfully integrated</div>
+        <div class="elig-row"><span>Submit by 17:00</span> &mdash; live link + pitch. No exceptions.</div>
+        <div class="elig-row"><span>Be present at 18:00</span> &mdash; at least one team member</div>
+      </div>
+      <div class="split-col">
+        <div class="split-col-title">Judging Criteria</div>
+        <div class="criteria-row"><span class="criteria-num">01</span><span class="criteria-name">Problem</span></div>
+        <div class="criteria-row"><span class="criteria-num">02</span><span class="criteria-name">Solution</span></div>
+        <div class="criteria-row"><span class="criteria-num">03</span><span class="criteria-name">Market Size</span></div>
+        <div class="criteria-row"><span class="criteria-num">04</span><span class="criteria-name">Business Model</span></div>
+        <div class="criteria-row"><span class="criteria-num">05</span><span class="criteria-name">Moat</span></div>
+        <div class="criteria-row"><span class="criteria-num">06</span><span class="criteria-name">Product</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 14. PRIZES ====== -->
+  <div class="slide" id="s17">
+    <span class="badge">The Prizes</span>
+    <h2><span class="tag-orange">&euro;1,500</span> cash + <span class="tag-orange">&euro;25K+</span> credits</h2>
+    <div class="accent-line center"></div>
+    <div class="prize-grid">
+      <div class="prize-card gold">
+        <div class="prize-place">1st &mdash; The Ultimate Stack</div>
+        <div class="prize-cash">&euro;1,000</div>
+        <div class="prize-credits">10K Netlify + 10K Qoder credits</div>
+      </div>
+      <div class="prize-card">
+        <div class="prize-place">2nd &mdash; The Power Up</div>
+        <div class="prize-cash">&euro;300</div>
+        <div class="prize-credits">3K Netlify + 5K Qoder credits</div>
+      </div>
+      <div class="prize-card">
+        <div class="prize-place">3rd &mdash; The Launchpad</div>
+        <div class="prize-cash">&euro;200</div>
+        <div class="prize-credits">2K Netlify + 2K Qoder credits</div>
+      </div>
+    </div>
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 0.8rem 1.5rem; margin-top: 0.8rem;">
+      <p style="text-align: center; color: var(--fg); font-weight: 500;">
+        Everyone gets <span class="tag-orange" style="font-weight: 700;">&euro;500 CharlieLabs</span> + <span class="tag-orange" style="font-weight: 700;">800 Qoder</span> credits &mdash; no one leaves empty-handed
+      </p>
+    </div>
+    <p style="margin-top: 1rem; font-size: 0.85rem;">Sponsored by <strong style="color: var(--fg);">Netlify</strong> &middot; <strong style="color: var(--fg);">CharlieLabs</strong> &middot; <strong style="color: var(--fg);">Qoder</strong></p>
+  </div>
+
+  <!-- ====== 15. TEAM FORMATION ====== -->
+  <div class="slide" id="s18">
+    <span class="badge">Find Your Team</span>
+    <h2>Team <span class="tag-orange">Formation</span></h2>
+    <div class="accent-line center"></div>
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h3>Pitch</h3>
+        <p>30 seconds. Your idea, your skills, what you need.</p>
+      </div>
+      <span class="step-arrow">&rarr;</span>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>Form Teams</h3>
+        <p>2&ndash;3 people recommended. Solo is fine. Move fast.</p>
+      </div>
+      <span class="step-arrow">&rarr;</span>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h3>Build</h3>
+        <p>No long debates. No overthinking. Start hacking.</p>
+      </div>
+    </div>
+    <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--muted);">
+      Small teams move faster. Speed wins hackathons.
+    </p>
+  </div>
+
+  <!-- ====== 16. CREDENTIALS ====== -->
+  <div class="slide left" id="s19">
+    <span class="badge">Get Started</span>
+    <h2>Keys, Creds & <span class="tag-orange">Wi-Fi</span></h2>
+    <div class="accent-line"></div>
+
+    <!-- Wi-Fi banner -->
+    <div style="background: linear-gradient(135deg, var(--card), #252219); border: 1px solid var(--border-strong); border-radius: 8px; padding: 1.2rem 2rem; width: 100%; max-width: 960px; margin-top: 1.2rem; display: flex; align-items: center; gap: 2rem;">
+      <div style="flex-shrink: 0;">
+        <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem;">Wi-Fi Network</p>
+        <p style="font-family: 'Space Mono', monospace; font-size: 1.4rem; color: var(--fg); font-weight: 700;">AI AM</p>
+      </div>
+      <div style="width: 1px; height: 2.5rem; background: var(--border-strong); flex-shrink: 0;"></div>
+      <div>
+        <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem;">Password</p>
+        <p style="font-family: 'Space Mono', monospace; font-size: 1.4rem; color: var(--orange); font-weight: 700;">EntertheM@trix1!</p>
+      </div>
+    </div>
+
+    <!-- Sponsor cards -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; width: 100%; max-width: 960px; margin-top: 1rem;">
+      <!-- CharlieLabs -->
+      <div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.4rem; display: flex; flex-direction: column; gap: 0.6rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--orange); flex-shrink: 0;"></div>
+          <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);">CharlieLabs</p>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--fg); line-height: 1.4;">Sign up &amp; get credits at:</p>
+        <p style="font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--orange); word-break: break-all; line-height: 1.5; background: var(--bg-deep); padding: 0.5rem 0.7rem; border-radius: 4px;">charlielabs.ai/<wbr>tag-ai-hackathon-byos/</p>
+      </div>
+      <!-- Qoder -->
+      <div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.4rem; display: flex; flex-direction: column; gap: 0.6rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--blue); flex-shrink: 0;"></div>
+          <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);">Qoder</p>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--fg); line-height: 1.4;">Sign up with the <strong style="color: var(--orange);">same email</strong> you used for Luma</p>
+        <p style="font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--muted); background: var(--bg-deep); padding: 0.5rem 0.7rem; border-radius: 4px;">Luma email = automatic access</p>
+      </div>
+      <!-- Netlify -->
+      <div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.4rem; display: flex; flex-direction: column; gap: 0.6rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--amber); flex-shrink: 0;"></div>
+          <p style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);">Netlify</p>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--fg); line-height: 1.4;"><strong style="color: var(--orange);">1,000 build credits</strong> per team</p>
+        <div style="font-size: 0.75rem; color: var(--muted); background: var(--bg-deep); padding: 0.5rem 0.7rem; border-radius: 4px; line-height: 1.5;">
+          <span style="color: var(--fg);">1.</span> Use a credit-based plan<br>
+          <span style="color: var(--fg);">2.</span> Share your <strong style="color: var(--fg);">Team ID</strong><br>
+          <span style="font-size: 0.7rem; color: var(--dim);">&nbsp;&nbsp;&nbsp;Team Settings &rarr; right sidebar</span>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top: 1rem; font-size: 0.75rem; color: var(--dim); font-family: 'Space Mono', monospace; letter-spacing: 0.04em;">All apps must deploy to <span style="color: var(--fg);">.netlify.app</span> &middot; Try <span style="color: var(--orange);">netlify.new</span> to get started fast</p>
+  </div>
+
+  <!-- ====== 17. LET'S BUILD ====== -->
+  <div class="slide" id="s20">
+    <div class="bg-image" style="background-image: url('images/program-ecosystem.jpg'); filter: saturate(0.3) brightness(0.18) contrast(1.2);"></div>
+    <div class="bg-overlay" style="background: radial-gradient(ellipse at center, rgba(20,18,16,0.5), rgba(20,18,16,0.95));"></div>
+    <div class="tag-text-logo" style="font-size: clamp(1.5rem, 3vw, 2.5rem); margin-bottom: 1rem;">TAG</div>
+    <h1>Let's Build.</h1>
+    <div class="accent-line center"></div>
+    <p style="font-size: 1.2rem; color: var(--fg); font-weight: 500;">Ship or go home. The clock starts now.</p>
+    <div class="cta-box">
+      <p style="color: var(--fg); font-size: 0.9rem;">WiFi, sponsor credits & redemption details are <span class="tag-orange" style="font-weight: 700;">on every screen.</span></p>
+      <p style="color: var(--muted); font-size: 0.8rem; margin-top: 0.3rem;">Check the slides for all the info you need.</p>
+    </div>
+    <p style="margin-top: 2rem; font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--dim); letter-spacing: 0.06em;">TAG, YOU'RE IT.</p>
+  </div>
+
+</div>
+
+<div class="progress" id="progress"></div>
+<div class="slide-counter" id="counter">1 / 23</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const progress = document.getElementById('progress');
+  const counter = document.getElementById('counter');
+  const total = slides.length;
+  let current = 0;
+
+  function goTo(n) {
+    if (n < 0 || n >= total) return;
+    slides[current].classList.remove('active');
+    current = n;
+    slides[current].classList.add('active');
+    progress.style.width = ((current + 1) / total * 100) + '%';
+    counter.textContent = (current + 1) + ' / ' + total;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'Backspace') { e.preventDefault(); goTo(current - 1); }
+    if (e.key === 'Home') goTo(0);
+    if (e.key === 'End') goTo(total - 1);
+  });
+
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) diff > 0 ? goTo(current + 1) : goTo(current - 1);
+  });
+
+  document.addEventListener('click', e => {
+    const x = e.clientX / window.innerWidth;
+    if (x > 0.75) goTo(current + 1);
+    else if (x < 0.25) goTo(current - 1);
+  });
+
+  progress.style.width = (1 / total * 100) + '%';
+</script>
+
+</body>
+</html>
